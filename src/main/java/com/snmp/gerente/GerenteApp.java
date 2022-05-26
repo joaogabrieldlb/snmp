@@ -23,20 +23,19 @@ public class GerenteApp {
     private Snmp snmp;
     private PDU requestPDU;
 
-    public GerenteApp() throws IOException{
+    public GerenteApp(String ip_target, String comunidade_target) throws IOException{
         // community settings
         this.target = new CommunityTarget();
-        target.setCommunity(new OctetString("private"));
-        target.setAddress(new UdpAddress(InetAddress.getByName("localhost"), 161));
-        target.setVersion(SnmpConstants.version2c);
+        this.target.setCommunity(new OctetString(comunidade_target));
+        this.target.setAddress(new UdpAddress(InetAddress.getByName(ip_target), 161));
+        this.target.setVersion(SnmpConstants.version2c);
         
-    
         this.snmp = new Snmp(new DefaultUdpTransportMapping());
-        snmp.listen();
+        this.snmp.listen();
     
         this.requestPDU = new PDU();
     }
-    
+
     public void run(String command, String oid) throws Exception {
         switch (command.toUpperCase()) {
             case "GET":
@@ -44,9 +43,6 @@ public class GerenteApp {
                 break;
             case "GETNEXT":
                 executeGetNext(oid);
-                break;
-            case "SET":
-                executeSet(oid);
                 break;
             case "GETBULK":
                 executeGetBulk(oid);
@@ -69,16 +65,75 @@ public class GerenteApp {
         }
     }
 
-    private void executeGet(String oid) {
-    }
-    
-    private void executeGetNext(String oid) {
-    }
-    
-    private void executeSet(String oid) {
+    public void run(String command, String oid, String conteudo) throws Exception {
+        switch (command.toUpperCase()) {
+            case "SET":
+                executeSet(oid, conteudo);
+                break;
+            default:
+                throw new InvalidParameterException("\n\t[!] Operacao invalida!\n");
+        }
     }
 
-    private void executeGetBulk(String oid) {
+    private void executeGet(String oid) throws IOException {
+        this.requestPDU.add(new VariableBinding(new OID(oid)));
+        ResponseEvent response = this.snmp.get(requestPDU, target);
+        if (response.getResponse() == null) {
+            // request timed out
+            
+        }
+        else {
+            System.out.println("Received response from: " + response.getPeerAddress());
+            
+            // dump response PDU
+            System.out.println(response.getResponse().toString());
+        }
+    }
+    
+    private void executeGetNext(String oid) throws IOException {
+        requestPDU.add(new VariableBinding(new OID(oid)));
+        ResponseEvent response = snmp.getNext(requestPDU, target);
+        if (response.getResponse() == null) {
+            // request timed out
+            
+        }
+        else {
+            System.out.println("Received response from: " + response.getPeerAddress());
+            
+            // dump response PDU
+            System.out.println(response.getResponse().toString());
+        }
+    }
+    
+    private void executeSet(String oid, String conteudo) throws IOException {
+        requestPDU.add(new VariableBinding(new OID(oid), new OctetString(conteudo)));
+        //Quando for SET, precisa setar a comunidade! (private)
+        ResponseEvent response = this.snmp.set(requestPDU, target);
+        if (response.getResponse() == null) {
+            // request timed out
+            
+        }
+        else {
+            System.out.println("Received response from: " + response.getPeerAddress());
+            
+            // dump response PDU
+            System.out.println(response.getResponse().toString());
+        }
+    }
+
+    private void executeGetBulk(String oid) throws IOException {
+        requestPDU.add(new VariableBinding(new OID(oid)));
+        ResponseEvent response = snmp.getBulk(requestPDU, target);
+        if (response.getResponse() == null) {
+            // request timed out
+            
+        }
+        else {
+            System.out.println("Received response from: " + response.getPeerAddress());
+            
+            // dump response PDU
+            System.out.println(response.getResponse().toString());
+        }
     }
     
     private void executeWalk(String oid) {
@@ -104,7 +159,6 @@ public class GerenteApp {
         PDU requestPDU = new PDU();
         
         requestPDU.add(new VariableBinding(new OID(oid), new OctetString("TESTE FOI2")));
-
         //Quando for SET, precisa setar a comunidade! (private)
         ResponseEvent response = snmp.set(requestPDU, target);
         // snmp.getNext(pdu, target)
