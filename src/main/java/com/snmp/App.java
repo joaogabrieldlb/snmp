@@ -10,6 +10,8 @@ public class App {
     public static void main(String[] args) {
         List<String> arguments = Arrays.asList(args);
 
+        arguments.forEach(x => x.);
+
         switch (args[0].toUpperCase()) {
             case "AGENTE":
                 try {

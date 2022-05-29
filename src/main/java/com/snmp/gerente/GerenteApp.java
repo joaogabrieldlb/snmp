@@ -53,13 +53,13 @@ public class GerenteApp {
                 executeGetNext(args.get(4));    // oid
                 break;
             case "GETBULK":
-                executeGetBulk(args.subList(3, args.size() - 1));   // non-repeaters, max_repetitions, oid(s)
+                executeGetBulk(args.get(4), args.get(5), args.subList(6, args.size() - 1));   // non-repeaters, max_repetitions, oid(s)
                 break;
             case "GETTABLE":
-                executeGetTable(oid);
+                executeGetTable(args.get(4));   // oid
                 break;
             case "GETDELTA":
-                executeGetDelta(oid);
+                executeGetDelta(args.get(4), args.subList(5, args.size() - 1)); // time, oid(s)
                 break;
             case "WALK":
                 executeWalk(oid);
@@ -79,6 +79,7 @@ public class GerenteApp {
     private static void verifyArguments(List<String> args) {
         switch(args.get(3).toUpperCase()) {
             case "GET":
+            case "GETTABLE":
             case "GETNEXT":     // args = "gerente", ip_target, comunidade_target, command, oid
                 if (args.size() != 5) App.printHelpMessageAndExitProgram(args);
                 break;
@@ -87,9 +88,6 @@ public class GerenteApp {
                 break;
             case "GETBULK":     // args = "gerente", ip_target, comunidade_target, command, non-repeaters, max_repetitions, oid(s)
                 if (args.size() < 7) App.printHelpMessageAndExitProgram(args);
-                break;
-            case "GETTABLE":
-                //TODO: verify GETTABLE operation
                 break;
             case "WALK":
                 //TODO: verify WALK operation
@@ -147,8 +145,8 @@ public class GerenteApp {
             System.out.println(response.getResponse().toString());
         }
     }
-
-    private void executeGetBulk(List<String> args) throws IOException {
+    // non-repeaters, max_repetitions
+    private void executeGetBulk(String nonRepeaters, String maxRepetitions, List<String> oids) throws IOException {
 
         requestPDU.add(new VariableBinding(new OID(oid)));
         ResponseEvent response = snmp.getBulk(requestPDU, target);
@@ -170,7 +168,7 @@ public class GerenteApp {
     private void executeGetTable(String oid) {
     }
     
-    private void executeGetDelta(String oid) {
+    private void executeGetDelta(String time, List<String> oids) {
     }
 
     // private void executeTest(String oid) throws IOException {
