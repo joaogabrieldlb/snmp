@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.snmp.App;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
@@ -23,6 +27,9 @@ public class GerenteApp {
     private Snmp snmp;
     private PDU requestPDU;
 
+    private int DEFAULT_MAX_REPETITIONS_VALUE = 0;
+    private int DEFAULT_NON_REPETERS_VALUE = 0;
+
     public GerenteApp(String ip_target, String comunidade_target) throws IOException{
         // community settings
         this.target = new CommunityTarget();
@@ -36,19 +43,17 @@ public class GerenteApp {
         this.requestPDU = new PDU();
     }
 
-    public void run(String command, String oid) throws Exception {
-        switch (command.toUpperCase()) {
+    public void run(List<String> args) throws Exception {
+        verifyArguments(args);
+        switch (args.get(3).toUpperCase()) {
             case "GET":
-                executeGet(oid);
+                executeGet(args.get(4));        // oid
                 break;
             case "GETNEXT":
-                executeGetNext(oid);
+                executeGetNext(args.get(4));    // oid
                 break;
             case "GETBULK":
-                executeGetBulk(oid);
-                break;
-            case "WALK":
-                executeWalk(oid);
+                executeGetBulk(args.subList(3, args.size() - 1));   // non-repeaters, max_repetitions, oid(s)
                 break;
             case "GETTABLE":
                 executeGetTable(oid);
@@ -56,19 +61,41 @@ public class GerenteApp {
             case "GETDELTA":
                 executeGetDelta(oid);
                 break;
-            // test case
-            case "TEST":
-                executeTest(oid);
+            case "WALK":
+                executeWalk(oid);
                 break;
+            case "SET":
+                executeSet(args.get(4), args.get(5));   // oid, content
+                break;
+            // // test case
+            // case "TEST":
+            //     executeTest(oid);
+            //     break;
             default:
                 throw new InvalidParameterException("\n\t[!] Operacao invalida!\n");
         }
     }
 
-    public void run(String command, String oid, String conteudo) throws Exception {
-        switch (command.toUpperCase()) {
-            case "SET":
-                executeSet(oid, conteudo);
+    private static void verifyArguments(List<String> args) {
+        switch(args.get(3).toUpperCase()) {
+            case "GET":
+            case "GETNEXT":     // args = "gerente", ip_target, comunidade_target, command, oid
+                if (args.size() != 5) App.printHelpMessageAndExitProgram(args);
+                break;
+            case "GETDELTA":    // args = "gerente", ip_target, comunidade_target, command, time, oid(s)
+                if (args.size() < 6) App.printHelpMessageAndExitProgram(args);
+                break;
+            case "GETBULK":     // args = "gerente", ip_target, comunidade_target, command, non-repeaters, max_repetitions, oid(s)
+                if (args.size() < 7) App.printHelpMessageAndExitProgram(args);
+                break;
+            case "GETTABLE":
+                //TODO: verify GETTABLE operation
+                break;
+            case "WALK":
+                //TODO: verify WALK operation
+                break;
+            case "SET":     // args = "gerente", ip_target, comunidade_target, command, oid, content
+                if (args.size() != 6) App.printHelpMessageAndExitProgram(args);
                 break;
             default:
                 throw new InvalidParameterException("\n\t[!] Operacao invalida!\n");
@@ -121,7 +148,8 @@ public class GerenteApp {
         }
     }
 
-    private void executeGetBulk(String oid) throws IOException {
+    private void executeGetBulk(List<String> args) throws IOException {
+
         requestPDU.add(new VariableBinding(new OID(oid)));
         ResponseEvent response = snmp.getBulk(requestPDU, target);
         if (response.getResponse() == null) {
@@ -145,34 +173,34 @@ public class GerenteApp {
     private void executeGetDelta(String oid) {
     }
 
-    private void executeTest(String oid) throws IOException {
-        // community settings
-        CommunityTarget target = new CommunityTarget();
-        target.setCommunity(new OctetString("private"));
-        target.setAddress(new UdpAddress(InetAddress.getByName("localhost"), 161));
-        target.setVersion(SnmpConstants.version2c);
+    // private void executeTest(String oid) throws IOException {
+    //     // community settings
+    //     CommunityTarget target = new CommunityTarget();
+    //     target.setCommunity(new OctetString("private"));
+    //     target.setAddress(new UdpAddress(InetAddress.getByName("localhost"), 161));
+    //     target.setVersion(SnmpConstants.version2c);
         
     
-        Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-        snmp.listen();
+    //     Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+    //     snmp.listen();
     
-        PDU requestPDU = new PDU();
+    //     PDU requestPDU = new PDU();
         
-        requestPDU.add(new VariableBinding(new OID(oid), new OctetString("TESTE FOI2")));
-        //Quando for SET, precisa setar a comunidade! (private)
-        ResponseEvent response = snmp.set(requestPDU, target);
-        // snmp.getNext(pdu, target)
-        // snmp.getBulk(pdu, target)
-        // snmp.get(pdu, target)
-        if (response.getResponse() == null) {
-            // request timed out
+    //     requestPDU.add(new VariableBinding(new OID(oid), new OctetString("TESTE FOI2")));
+    //     //Quando for SET, precisa setar a comunidade! (private)
+    //     ResponseEvent response = snmp.set(requestPDU, target);
+    //     // snmp.getNext(pdu, target)
+    //     // snmp.getBulk(pdu, target)
+    //     // snmp.get(pdu, target)
+    //     if (response.getResponse() == null) {
+    //         // request timed out
             
-        }
-        else {
-            System.out.println("Received response from: " + response.getPeerAddress());
+    //     }
+    //     else {
+    //         System.out.println("Received response from: " + response.getPeerAddress());
             
-            // dump response PDU
-            System.out.println(response.getResponse().toString());
-        }
-    }
+    //         // dump response PDU
+    //         System.out.println(response.getResponse().toString());
+    //     }
+    // }
 }
