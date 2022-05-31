@@ -11,7 +11,7 @@ public class SnmpFactory {
         return new AgenteApp();
     }
 
-    public static GerenteApp criaGerente(String ip_target, String comunidade_targe) throws IOException {
-        return new GerenteApp(ip_target, comunidade_targe);
+    public static GerenteApp criaGerente(String ip_agente, String comunidade) throws IOException {
+        return new GerenteApp(ip_agente, comunidade);
     }
 }

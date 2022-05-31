@@ -1,16 +1,17 @@
 package com.snmp;
 
+import java.security.InvalidParameterException;
 import java.util.Arrays;
-import java.util.List;
-
 import com.snmp.util.SnmpFactory;
 import com.snmp.util.TextColor;
 
 public class App {
     public static void main(String[] args) {
-        List<String> arguments = Arrays.asList(args);
-
-        arguments.forEach(x => x.);
+        // List<String> arguments = Arrays.asList(args);
+        // arguments.forEach(x -> System.out.println("> " + x));
+        if (args.length < 4) {
+            printHelpMessageAndExitProgram(args);
+        }
 
         switch (args[0].toUpperCase()) {
             case "AGENTE":
@@ -18,35 +19,44 @@ public class App {
                     SnmpFactory.criaAgente().run();
                 } catch (Exception ex) {
                     System.out.println(ex.getMessage());
+                    printHelpMessageAndExitProgram(args);
                 }
                 break;
             case "GERENTE":
                 try {
-                    SnmpFactory.criaGerente(args[1], args[2]).run(arguments);
+                    String[] gerente_args = Arrays.copyOfRange(args, 3, args.length);
+                    SnmpFactory.criaGerente(args[1], args[2]).run(gerente_args);
+                } catch (InvalidParameterException ex) {
+                    System.out.println(ex.getMessage());
+                    printHelpMessageAndExitProgram(args);
                 } catch (Exception ex) {
                     System.out.println(ex.getMessage());
+                    printHelpMessageAndExitProgram(args);
                 }
                 break;
             default:
-                printHelpMessageAndExitProgram(arguments);
+                printHelpMessageAndExitProgram(args);
         }
 
         System.exit(0);
     }
 
-    public static void printHelpMessageAndExitProgram(List<String> args) {
-        System.out.print("\n[" + TextColor.red + "ERROR"+ TextColor.defaultColor +"] \u001B[37mNao foi possivel executar o programa ");
-        if(args.size() != 0) {
-            System.out.print("com o(s) argumento(s): ");
-            for (int i = 0; i < args.size(); i++) {
-                System.out.print("\"" + args.get(i) + "\"" + (i == (args.size() - 1) ? TextColor.defaultColor + "\n" : ", "));
+    private static void printHelpMessageAndExitProgram(String[] args) {
+        String helpMessage = "";
+        helpMessage += "\n[" + TextColor.red + "ERRO" + TextColor.defaultColor + "] Nao foi possivel executar o programa ";
+        if(args.length != 0) {
+            helpMessage += "com o(s) argumento(s): ";
+            for (int i = 0; i < args.length; i++) {
+                helpMessage += "\"" + args[i] + "\"";
+                helpMessage += (i == (args.length - 1) ? "\n" : ", ");
             }
         } else {
-            System.out.print("sem os argumentos\n");
+            helpMessage += "sem argumentos.";
         }
-        System.out.println("\n\t" + TextColor.lightGreen +"Formas de uso:"+ TextColor.defaultColor);
-        System.out.println("\t" + TextColor.lightGreen +" 1. java App agente | java App gerente operacao_snmpv2c oid"+ TextColor.defaultColor);
-        System.out.println("\t" + TextColor.lightGreen +" 2. .\\run agente | .\\run gerente ip_target comunidade_target operacao_snmpv2c oid conteudo"+ TextColor.defaultColor + "\n");
+        helpMessage += "\n\t" + TextColor.lightGreen +"Formas de uso:";
+        helpMessage += "\n\t- Modo GERENTE: [ java App gerente | ./gerente.sh ] <ip_agente> <comunidade> <operacao_snmpv2c> <oid(s)> <conteudo>\n" + TextColor.defaultColor;
+        //helpMessage += "\n\t- Modo Agente: [ java App agente | ./agente.sh ] ";
+        System.out.println(helpMessage);
         System.exit(1);
     }
 }
