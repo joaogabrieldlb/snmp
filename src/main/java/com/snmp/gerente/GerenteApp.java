@@ -22,6 +22,8 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 import org.snmp4j.util.DefaultPDUFactory;
 import org.snmp4j.util.TableEvent;
 import org.snmp4j.util.TableUtils;
+import org.snmp4j.util.TreeEvent;
+import org.snmp4j.util.TreeUtils;
 
 public class GerenteApp {
 
@@ -189,15 +191,31 @@ public class GerenteApp {
         imprimeResponse(response);
     }
 
-    private void executeWalk2(String oid) {
+    private void executeWalk2(String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
         this.response = this.snmp.get(requestPDU, target);
         int syntaxCode = response.getResponse().get(0).getSyntax();
         if (syntaxCode == 128 ^ syntaxCode == 129) { // indica erro
             
         }
-        //executeGet(oid);
-        //this.response.
+    }
+
+    private void executeWalk(String oid) {
+        TreeUtils treeUtils = new TreeUtils(this.snmp, new DefaultPDUFactory());
+        List<TreeEvent> events = treeUtils.walk(target, new OID[] { new OID(oid) });
+
+        for (TreeEvent event : events) {
+            VariableBinding[] list = event.getVariableBindings();
+            if (event.isError() || list == null || list.length == 0) {
+                continue;
+            }
+
+            for(VariableBinding vb: event.getVariableBindings()) {
+                String key = vb.getOid().toString();
+                String value = vb.getVariable().toString();
+                System.out.println(key + " - " + value);
+            }
+        }
     }
 
     private void executeGetTable(String oid) {
