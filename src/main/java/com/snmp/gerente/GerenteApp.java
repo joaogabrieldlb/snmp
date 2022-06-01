@@ -3,6 +3,7 @@ package com.snmp.gerente;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +25,8 @@ import org.snmp4j.util.TableEvent;
 import org.snmp4j.util.TableUtils;
 import org.snmp4j.util.TreeEvent;
 import org.snmp4j.util.TreeUtils;
+
+import de.vandermeer.asciitable.AsciiTable;
 
 public class GerenteApp {
 
@@ -191,29 +194,19 @@ public class GerenteApp {
         imprimeResponse(response);
     }
 
-    private void executeWalk2(String oid) throws IOException {
-        this.requestPDU.add(new VariableBinding(new OID(oid)));
-        this.response = this.snmp.get(requestPDU, target);
-        int syntaxCode = response.getResponse().get(0).getSyntax();
-        if (syntaxCode == 128 ^ syntaxCode == 129) { // indica erro
-            
-        }
-    }
-
-    private void executeWalk(String oid) {
+    private void executeWalk(String oid) throws IOException {
         TreeUtils treeUtils = new TreeUtils(this.snmp, new DefaultPDUFactory());
         List<TreeEvent> events = treeUtils.walk(target, new OID[] { new OID(oid) });
 
         for (TreeEvent event : events) {
             VariableBinding[] list = event.getVariableBindings();
             if (event.isError() || list == null || list.length == 0) {
+                System.out.println("Fim da operação WALK");
                 continue;
             }
-
+            
             for(VariableBinding vb: event.getVariableBindings()) {
-                String key = vb.getOid().toString();
-                String value = vb.getVariable().toString();
-                System.out.println(key + " - " + value);
+                System.out.println(vb.toString());
             }
         }
     }
@@ -224,16 +217,108 @@ public class GerenteApp {
         TableUtils tUtils = new TableUtils(this.snmp, new DefaultPDUFactory());
         List<TableEvent> events = tUtils.getTable(this.target, new OID[] { new OID(oid) }, null, null);
 
+        AsciiTable asciiTable = new AsciiTable();
+
+        int countIndexes = 0;
+        int maxIndex = 0;
+        for (int index = 0; index <= events.size(); index++) {
+            int actualIndex = events.get(index).getIndex().last();
+            // System.out.println(events.get(index).getIndex().toIntArray()[1]);
+            //int actualIndex = events.get(index).getIndex().toIntArray()[1];
+            if(actualIndex > maxIndex){
+                countIndexes++;
+                maxIndex = actualIndex;
+            } else {
+                break;
+            }
+        }
+
+        System.out.println(countIndexes);
+        System.out.println(maxIndex);
+        System.out.println("--------------------");
+
+        List<String> rowData = new ArrayList<>();
+        asciiTable.addRule();
+        for (int i = 0; i < events.size(); i = i + countIndexes) {
+            rowData.clear();
+            for (int j = i; j < i + countIndexes; j++) {
+                System.out.println(events.get(j).getIndex().toIntArray()[1]);
+                String celula = events.get(j).getIndex() + " = " + events.get(j).getColumns()[0].toValueString();
+                rowData.add(celula);
+            }
+            asciiTable.addRow(rowData);
+            asciiTable.addRule();
+        }
+
+        String rend = asciiTable.render(140);
+        System.out.println("Table = " + oid);
+        System.out.println(rend);
+
+
+
+        // int maxValue = 0;
+        // for (TableEvent event : events) {
+        //     if (event.isError()) {
+        //         continue;
+        //         // throw new RuntimeException(event.getErrorMessage());
+        //     }
+        //     // String[] args = event.getIndex().toString().split(".");
+        //     int index = event.getIndex().last();
+        //     System.out.println("INDICE LAST> " + index); 
+        //     //Math.max(a, b);
+        //     //1,2,3,4
+        //     //oid.1 = 2, oid.5 = 3, oid.7 = 43, oid.88 = 56 
+
+            
+           
+
+        //     System.out.println();
+        //     // teste = new List<String>();
+        //     // for (VariableBinding vb : event.getColumns()) {
+                
+        //     //     // String key = vb.getOid().toString();
+        //     //     // String value = vb.getVariable().toString();            
+        //     //     // System.out.println(key + " - " + value);
+        //     // }
+        //     System.out.println("===================");
+        // }
+    }
+        
+    private void executeGetTable2(String oid) {
+        if (!oid.startsWith("."))
+            oid = "." + oid;
+        TableUtils tUtils = new TableUtils(this.snmp, new DefaultPDUFactory());
+        List<TableEvent> events = tUtils.getTable(this.target, new OID[] { new OID(oid) }, null, null);
+                
+        AsciiTable asciiTable = new AsciiTable();
+        int count = 0;
+        int maxIndex = 0;
+        for (int index = 0; index <= events.size(); index++) {
+            int actualIndex = events.get(index).getIndex().last();
+            if(actualIndex > maxIndex){
+                count++;
+                maxIndex = actualIndex;
+            } else {
+                break;
+            }
+        }
+
         for (TableEvent event : events) {
             if (event.isError()) {
                 continue;
                 // throw new RuntimeException(event.getErrorMessage());
             }
-            for (VariableBinding vb : event.getColumns()) {
-                String key = vb.getOid().toString();
-                String value = vb.getVariable().toString();
-                System.out.println(key + " - " + value);
-            }
+           
+            //1,2,3,4
+            //oid.1 = 2, oid.5 = 3, oid.7 = 43, oid.88 = 56 
+            // teste = new List<String>();
+            // for (VariableBinding vb : event.getColumns()) {
+                
+            //     // String key = vb.getOid().toString();
+            //     // String value = vb.getVariable().toString();            
+            //     // System.out.println(key + " - " + value);
+            // }
+            System.out.println("===================");
         }
     }
 
