@@ -127,42 +127,10 @@ public class GerenteApp {
                             "Operacao " + gerente_args[0].toUpperCase() + " deve possuir 2 parametros.");
                 executeSet(gerente_args[1], gerente_args[2]); // oid, content
                 break;
-            // // test case
-            // case "TEST":
-            // executeTest(oid);
-            // break;
             default:
                 throw new InvalidParameterException("\n\t[!] Operacao invalida!\n");
         }
     }
-
-    // private static void verifyArguments(List<String> args) {
-    // switch(args.get(3).toUpperCase()) {
-    // case "GET":
-    // case "GETTABLE":
-    // case "GETNEXT": // args = "gerente", ip_target, comunidade_target, command,
-    // oid
-    // if (args.size() != 5) App.printHelpMessageAndExitProgram(args);
-    // break;
-    // case "GETDELTA": // args = "gerente", ip_target, comunidade_target, command,
-    // time, oid(s)
-    // if (args.size() < 6) App.printHelpMessageAndExitProgram(args);
-    // break;
-    // case "GETBULK": // args = "gerente", ip_target, comunidade_target, command,
-    // non-repeaters, max_repetitions, oid(s)
-    // if (args.size() < 7) App.printHelpMessageAndExitProgram(args);
-    // break;
-    // case "WALK":
-    // //TODO: verify WALK operation
-    // break;
-    // case "SET": // args = "gerente", ip_target, comunidade_target, command, oid,
-    // content
-    // if (args.size() != 6) App.printHelpMessageAndExitProgram(args);
-    // break;
-    // default:
-    // throw new InvalidParameterException("\n\t[!] Operacao invalida!\n");
-    // }
-    // }
 
     private void executeGet(String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
@@ -219,113 +187,48 @@ public class GerenteApp {
 
         AsciiTable asciiTable = new AsciiTable();
 
-        int countIndexes = 0;
-        int maxIndex = 0;
+        int firstIndex = events.get(0).getIndex().toIntArray()[1];
+        int countColumns = 0;
         for (int index = 0; index <= events.size(); index++) {
-            int actualIndex = events.get(index).getIndex().last();
-            // System.out.println(events.get(index).getIndex().toIntArray()[1]);
-            //int actualIndex = events.get(index).getIndex().toIntArray()[1];
-            if(actualIndex > maxIndex){
-                countIndexes++;
-                maxIndex = actualIndex;
+            int actualIndex = events.get(index).getIndex().toIntArray()[1];
+            if(actualIndex == firstIndex){
+                countColumns++;
             } else {
                 break;
             }
         }
 
-        System.out.println(countIndexes);
-        System.out.println(maxIndex);
-        System.out.println("--------------------");
-
         List<String> rowData = new ArrayList<>();
         asciiTable.addRule();
-        for (int i = 0; i < events.size(); i = i + countIndexes) {
+        for (int i = 0; i < events.size(); i = i + countColumns) {
             rowData.clear();
-            for (int j = i; j < i + countIndexes; j++) {
-                System.out.println(events.get(j).getIndex().toIntArray()[1]);
-                String celula = events.get(j).getIndex() + " = " + events.get(j).getColumns()[0].toValueString();
+            for (int j = i; j < i + countColumns; j++) {
+                String celula;
+                if (i == 0) {
+                    celula = "Indice = " + events.get(j).getColumns()[0].toValueString();
+                } else {
+                    celula = events.get(j).getIndex() + " = " + events.get(j).getColumns()[0].toValueString();
+                }
                 rowData.add(celula);
             }
             asciiTable.addRow(rowData);
             asciiTable.addRule();
         }
+        
+        AsciiTable titulo = new AsciiTable();
+        titulo.addRule();
+        titulo.addRow("Table = " + oid);
+        titulo.addRule();
+        String rendTitulo = titulo.render(35 * countColumns);
+        System.out.println(rendTitulo);
 
-        String rend = asciiTable.render(140);
-        System.out.println("Table = " + oid);
+        String rend = asciiTable.render(35 * countColumns);
         System.out.println(rend);
-
-
-
-        // int maxValue = 0;
-        // for (TableEvent event : events) {
-        //     if (event.isError()) {
-        //         continue;
-        //         // throw new RuntimeException(event.getErrorMessage());
-        //     }
-        //     // String[] args = event.getIndex().toString().split(".");
-        //     int index = event.getIndex().last();
-        //     System.out.println("INDICE LAST> " + index); 
-        //     //Math.max(a, b);
-        //     //1,2,3,4
-        //     //oid.1 = 2, oid.5 = 3, oid.7 = 43, oid.88 = 56 
-
-            
-           
-
-        //     System.out.println();
-        //     // teste = new List<String>();
-        //     // for (VariableBinding vb : event.getColumns()) {
-                
-        //     //     // String key = vb.getOid().toString();
-        //     //     // String value = vb.getVariable().toString();            
-        //     //     // System.out.println(key + " - " + value);
-        //     // }
-        //     System.out.println("===================");
-        // }
     }
         
-    private void executeGetTable2(String oid) {
-        if (!oid.startsWith("."))
-            oid = "." + oid;
-        TableUtils tUtils = new TableUtils(this.snmp, new DefaultPDUFactory());
-        List<TableEvent> events = tUtils.getTable(this.target, new OID[] { new OID(oid) }, null, null);
-                
-        AsciiTable asciiTable = new AsciiTable();
-        int count = 0;
-        int maxIndex = 0;
-        for (int index = 0; index <= events.size(); index++) {
-            int actualIndex = events.get(index).getIndex().last();
-            if(actualIndex > maxIndex){
-                count++;
-                maxIndex = actualIndex;
-            } else {
-                break;
-            }
-        }
-
-        for (TableEvent event : events) {
-            if (event.isError()) {
-                continue;
-                // throw new RuntimeException(event.getErrorMessage());
-            }
-           
-            //1,2,3,4
-            //oid.1 = 2, oid.5 = 3, oid.7 = 43, oid.88 = 56 
-            // teste = new List<String>();
-            // for (VariableBinding vb : event.getColumns()) {
-                
-            //     // String key = vb.getOid().toString();
-            //     // String value = vb.getVariable().toString();            
-            //     // System.out.println(key + " - " + value);
-            // }
-            System.out.println("===================");
-        }
-    }
-
     private void executeGetDelta(int tempo, int amostras, String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
-        ResponseEvent response;
-        response = this.snmp.get(requestPDU, target);
+        this.response = this.snmp.get(requestPDU, target);
         System.out.println(response.getResponse().toString());
 
         Long resultLong = null;
@@ -351,7 +254,7 @@ public class GerenteApp {
             }
 
             msg = new StringBuilder("[T" + (i + 1) + "]\t");
-            response = snmp.get(requestPDU, target);
+            this.response = snmp.get(requestPDU, target);
             if (response.getResponse() == null) {
                 // request timed out
                 msg.append(TextColor.red + "timeout" + TextColor.defaultColor);
@@ -406,35 +309,4 @@ public class GerenteApp {
         }
         return buf.toString();
     }
-
-    // private void executeTest(String oid) throws IOException {
-    // // community settings
-    // CommunityTarget target = new CommunityTarget();
-    // target.setCommunity(new OctetString("private"));
-    // target.setAddress(new UdpAddress(InetAddress.getByName("localhost"), 161));
-    // target.setVersion(SnmpConstants.version2c);
-
-    // Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-    // snmp.listen();
-
-    // PDU requestPDU = new PDU();
-
-    // requestPDU.add(new VariableBinding(new OID(oid), new OctetString("TESTE
-    // FOI2")));
-    // //Quando for SET, precisa setar a comunidade! (private)
-    // this.response = snmp.set(requestPDU, target);
-    // // snmp.getNext(pdu, target)
-    // // snmp.getBulk(pdu, target)
-    // // snmp.get(pdu, target)
-    // if (response.getResponse() == null) {
-    // // request timed out
-
-    // }
-    // else {
-    // System.out.println("Received response from: " + response.getPeerAddress());
-
-    // // dump response PDU
-    // System.out.println(response.getResponse().toString());
-    // }
-    // }
 }
