@@ -138,20 +138,20 @@ public class GerenteApp {
     private void executeGet(String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
         this.response = this.snmp.get(requestPDU, target);
-        imprimeResponse(response);
+        imprimeResponse(this.response);
     }
 
     private void executeGetNext(String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
         this.response = this.snmp.getNext(requestPDU, target);
-        imprimeResponse(response);
+        imprimeResponse(this.response);
     }
 
     private void executeSet(String oid, String conteudo) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid), new OctetString(conteudo)));
         // Quando for SET, precisa setar a comunidade! (private)
         this.response = this.snmp.set(requestPDU, target);
-        imprimeResponse(response);
+        imprimeResponse(this.response);
     }
 
     // non_repeaters, max_repetitions
@@ -162,7 +162,7 @@ public class GerenteApp {
         this.requestPDU.setNonRepeaters(nonRepeaters);
         this.requestPDU.setMaxRepetitions(maxRepetitions);
         this.response = this.snmp.getBulk(requestPDU, target);
-        imprimeResponse(response);
+        imprimeResponse(this.response);
     }
 
     private void executeWalk(String oid) throws IOException {
@@ -188,8 +188,6 @@ public class GerenteApp {
         TableUtils tUtils = new TableUtils(this.snmp, new DefaultPDUFactory());
         List<TableEvent> events = tUtils.getTable(this.target, new OID[] { new OID(oid) }, null, null);
 
-        AsciiTable asciiTable = new AsciiTable();
-
         int firstIndex = events.get(0).getIndex().toIntArray()[1];
         int countColumns = 0;
         for (int index = 0; index <= events.size(); index++) {
@@ -200,9 +198,17 @@ public class GerenteApp {
                 break;
             }
         }
+        int larguraTabela = 35 * countColumns;
 
+        AsciiTable titulo = new AsciiTable();
+        titulo.addRule();
+        titulo.addRow("Table = " + oid);
+        titulo.addRule();
+        String rendTitulo = titulo.render(larguraTabela);
+        
+        AsciiTable tabela = new AsciiTable();
         List<String> rowData = new ArrayList<>();
-        asciiTable.addRule();
+        tabela.addRule();
         for (int i = 0; i < events.size(); i = i + countColumns) {
             rowData.clear();
             for (int j = i; j < i + countColumns; j++) {
@@ -214,41 +220,35 @@ public class GerenteApp {
                 }
                 rowData.add(celula);
             }
-            asciiTable.addRow(rowData);
-            asciiTable.addRule();
+            tabela.addRow(rowData);
+            tabela.addRule();
         }
+        String rendTabela = tabela.render(larguraTabela);
         
-        AsciiTable titulo = new AsciiTable();
-        titulo.addRule();
-        titulo.addRow("Table = " + oid);
-        titulo.addRule();
-        String rendTitulo = titulo.render(35 * countColumns);
         System.out.println(rendTitulo);
-
-        String rend = asciiTable.render(35 * countColumns);
-        System.out.println(rend);
+        System.out.println(rendTabela);
     }
         
     private void executeGetDelta(int tempo, int amostras, String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
         this.response = this.snmp.get(requestPDU, target);
-        System.out.println(response.getResponse().toString());
+        System.out.println(this.response.getResponse().toString());
 
         Long resultLong = null;
         Long deltaLong = null;
         Double resultDouble = null;
         Double deltaDouble = null;
         try {
-            resultLong = Long.parseLong(response.getResponse().get(0).toValueString());
+            resultLong = Long.parseLong(this.response.getResponse().get(0).toValueString());
         } catch (NumberFormatException e1) {
             try {
-                resultDouble = Double.parseDouble(response.getResponse().get(0).toValueString());
+                resultDouble = Double.parseDouble(this.response.getResponse().get(0).toValueString());
             } catch (NumberFormatException e2) {
                 throw new InvalidParameterException("Valor do objeto (OID) deve retornar um valor numerico.");
             }
         }
         
-        StringBuilder msg;
+        StringBuilder output;
         for (int i = 0; i < amostras; i++) {
             try {
                 TimeUnit.SECONDS.sleep(tempo);
@@ -256,60 +256,62 @@ public class GerenteApp {
                 e.printStackTrace();
             }
 
-            msg = new StringBuilder("[T" + (i + 1) + "]\t");
+            output = new StringBuilder();
+            output.append("[T" + (i + 1) + "]\t");
             this.response = snmp.get(requestPDU, target);
-            if (response.getResponse() == null) {
+            if (this.response.getResponse() == null) {
                 // request timed out
-                msg.append(TextColor.red + "timeout" + TextColor.defaultColor);
+                output.append(TextColor.red + "timeout" + TextColor.defaultColor);
             } else {
+                output.append("Delta = ");
                 if (resultLong != null) {
-                    deltaLong = Long.parseLong(response.getResponse().get(0).toValueString()) - resultLong;
-                    resultLong = Long.parseLong(response.getResponse().get(0).toValueString());
-                    msg.append(deltaLong);
+                    deltaLong = Long.parseLong(this.response.getResponse().get(0).toValueString()) - resultLong;
+                    resultLong = Long.parseLong(this.response.getResponse().get(0).toValueString());
+                    output.append(deltaLong);
                 } else if (resultDouble != null) {
-                    deltaDouble = Double.parseDouble(response.getResponse().get(0).toValueString()) - resultDouble;
-                    resultDouble = Double.parseDouble(response.getResponse().get(0).toValueString());
-                    msg.append(deltaDouble);
+                    deltaDouble = Double.parseDouble(this.response.getResponse().get(0).toValueString()) - resultDouble;
+                    resultDouble = Double.parseDouble(this.response.getResponse().get(0).toValueString());
+                    output.append(deltaDouble);
                 }
             }
 
-            System.out.println(msg);
+            System.out.println(output);
         }
     }
 
     private void imprimeResponse(ResponseEvent response) {
-        String result = "";
+        StringBuilder output = new StringBuilder();
         if (response.getResponse() == null) {
             // request timed out
-            result += "[" + TextColor.red + "ERRO" + TextColor.defaultColor + "] ";
-            result += "Envio do Request expirou (time out).";
+            output.append("[" + TextColor.red + "ERRO" + TextColor.defaultColor + "] ");
+            output.append("Envio do request expirou (timeout).");
         } else {
             System.out.println("Response recebido de: " + response.getPeerAddress());
-            System.out.println("lenght: " + response.getResponse().size());
+            // System.out.println("lenght: " + response.getResponse().size());
             // dump response PDU
             if (response.getResponse().getErrorStatus() == 0) {
-                result += "[" + TextColor.lightGreen + "OK" + TextColor.defaultColor + "] ";
+                output.append("[" + TextColor.lightGreen + "OK" + TextColor.defaultColor + "] ");
             } else {
-                result += "[" + TextColor.red + "ERRO" + TextColor.defaultColor + "] ";
+                output.append("[" + TextColor.red + "ERRO" + TextColor.defaultColor + "] ");
             }
-            result += responseString(response.getResponse());
+            output.append(responseString(response.getResponse()));
         }
-        System.out.println(result);
+        System.out.println(output);
     }
 
     private String responseString(PDU pdu) {
-        StringBuilder buf = new StringBuilder();
-        buf.append(PDU.getTypeString(pdu.getType()));
-        buf.append("[requestID=");
-        buf.append(pdu.getRequestID());
-        buf.append(", errorStatus=");
-        buf.append(pdu.getErrorStatusText()).append("(").append(pdu.getErrorStatus()).append(")");
-        buf.append(", errorIndex=");
-        buf.append(pdu.getErrorIndex());
-        buf.append("] Objeto(s):\n");
+        StringBuilder responseString = new StringBuilder();
+        responseString.append(PDU.getTypeString(pdu.getType()));
+        responseString.append("[requestID=");
+        responseString.append(pdu.getRequestID());
+        responseString.append(", errorStatus=");
+        responseString.append(pdu.getErrorStatusText()).append("(").append(pdu.getErrorStatus()).append(")");
+        responseString.append(", errorIndex=");
+        responseString.append(pdu.getErrorIndex());
+        responseString.append("] Objeto(s):\n");
         for (int i = 0; i < pdu.size(); i++) {
-            buf.append("[" + (i + 1) + "]\t" + pdu.get(i) + "\n");
+            responseString.append("[" + (i + 1) + "]\t").append(pdu.get(i)).append("\n");
         }
-        return buf.toString();
+        return responseString.toString();
     }
 }
