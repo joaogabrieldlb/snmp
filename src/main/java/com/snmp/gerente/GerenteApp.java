@@ -172,7 +172,6 @@ public class GerenteApp {
         for (TreeEvent event : events) {
             VariableBinding[] list = event.getVariableBindings();
             if (event.isError() || list == null || list.length == 0) {
-                System.out.println("Fim da operação WALK");
                 continue;
             }
             
@@ -180,6 +179,7 @@ public class GerenteApp {
                 System.out.println(vb.toString());
             }
         }
+        System.out.println("Fim da operação WALK.");
     }
 
     private void executeGetTable(String oid) {
