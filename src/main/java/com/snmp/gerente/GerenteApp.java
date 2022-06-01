@@ -28,6 +28,7 @@ public class GerenteApp {
     private CommunityTarget target;
     private Snmp snmp;
     private PDU requestPDU;
+    private ResponseEvent response;
     private int nonRepeaters = 0;
     private int maxRepetitions = 0;
     private int tempo = 0;
@@ -70,14 +71,14 @@ public class GerenteApp {
                             "Operacao " + gerente_args[0].toUpperCase() + " deve possuir no minimo 3 parametros.");
                 try {
                     nonRepeaters = Integer.parseInt(gerente_args[1]);
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     throw new InvalidParameterException("Valor de non-repeaters (N) deve ser inteiro.");
                 }
                 if (nonRepeaters < 0)
                     throw new InvalidParameterException("Valor de non-repeaters (N) deve ser maior ou igual a zero.");
                 try {
                     maxRepetitions = Integer.parseInt(gerente_args[2]);
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     throw new InvalidParameterException("Valor de max-repetitions (M) deve ser inteiro.");
                 }
                 if (maxRepetitions < 0)
@@ -98,14 +99,14 @@ public class GerenteApp {
                             "Operacao " + gerente_args[0].toUpperCase() + " deve possuir 3 parametros.");
                 try {
                     tempo = Integer.parseInt(gerente_args[1]);
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     throw new InvalidParameterException("Valor de tempo (M) deve ser inteiro.");
                 }
                 if (tempo <= 0)
                     throw new InvalidParameterException("Valor de tempo (M) deve ser positivo.");
                 try {
                     amostras = Integer.parseInt(gerente_args[2]);
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     throw new InvalidParameterException("Valor de amostras (N) deve ser inteiro.");
                 }
                 if (amostras <= 0)
@@ -160,20 +161,20 @@ public class GerenteApp {
 
     private void executeGet(String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
-        ResponseEvent response = this.snmp.get(requestPDU, target);
+        this.response = this.snmp.get(requestPDU, target);
         imprimeResponse(response);
     }
 
     private void executeGetNext(String oid) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid)));
-        ResponseEvent response = this.snmp.getNext(requestPDU, target);
+        this.response = this.snmp.getNext(requestPDU, target);
         imprimeResponse(response);
     }
 
     private void executeSet(String oid, String conteudo) throws IOException {
         this.requestPDU.add(new VariableBinding(new OID(oid), new OctetString(conteudo)));
         // Quando for SET, precisa setar a comunidade! (private)
-        ResponseEvent response = this.snmp.set(requestPDU, target);
+        this.response = this.snmp.set(requestPDU, target);
         imprimeResponse(response);
     }
 
@@ -184,12 +185,19 @@ public class GerenteApp {
         }
         this.requestPDU.setNonRepeaters(nonRepeaters);
         this.requestPDU.setMaxRepetitions(maxRepetitions);
-        ResponseEvent response = this.snmp.getBulk(requestPDU, target);
+        this.response = this.snmp.getBulk(requestPDU, target);
         imprimeResponse(response);
     }
 
-    private void executeWalk(String oid) {
-        
+    private void executeWalk2(String oid) {
+        this.requestPDU.add(new VariableBinding(new OID(oid)));
+        this.response = this.snmp.get(requestPDU, target);
+        int syntaxCode = response.getResponse().get(0).getSyntax();
+        if (syntaxCode == 128 ^ syntaxCode == 129) { // indica erro
+            
+        }
+        //executeGet(oid);
+        //this.response.
     }
 
     private void executeGetTable(String oid) {
@@ -231,6 +239,7 @@ public class GerenteApp {
             }
         }
         
+        StringBuilder msg;
         for (int i = 0; i < amostras; i++) {
             try {
                 TimeUnit.SECONDS.sleep(tempo);
@@ -238,22 +247,20 @@ public class GerenteApp {
                 e.printStackTrace();
             }
 
-            String msg = "";
-            msg += "[T" + (i + 1) + "]\t";
-
+            msg = new StringBuilder("[T" + (i + 1) + "]\t");
             response = snmp.get(requestPDU, target);
             if (response.getResponse() == null) {
                 // request timed out
-                msg += TextColor.red + "timeout" + TextColor.defaultColor;
+                msg.append(TextColor.red + "timeout" + TextColor.defaultColor);
             } else {
                 if (resultLong != null) {
                     deltaLong = Long.parseLong(response.getResponse().get(0).toValueString()) - resultLong;
                     resultLong = Long.parseLong(response.getResponse().get(0).toValueString());
-                    msg += deltaLong;
+                    msg.append(deltaLong);
                 } else if (resultDouble != null) {
                     deltaDouble = Double.parseDouble(response.getResponse().get(0).toValueString()) - resultDouble;
                     resultDouble = Double.parseDouble(response.getResponse().get(0).toValueString());
-                    msg += deltaDouble;
+                    msg.append(deltaDouble);
                 }
             }
 
@@ -312,7 +319,7 @@ public class GerenteApp {
     // requestPDU.add(new VariableBinding(new OID(oid), new OctetString("TESTE
     // FOI2")));
     // //Quando for SET, precisa setar a comunidade! (private)
-    // ResponseEvent response = snmp.set(requestPDU, target);
+    // this.response = snmp.set(requestPDU, target);
     // // snmp.getNext(pdu, target)
     // // snmp.getBulk(pdu, target)
     // // snmp.get(pdu, target)
