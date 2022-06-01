@@ -119,6 +119,9 @@ public class GerenteApp {
                 executeGetDelta(tempo, amostras, gerente_args[3]); // tempo, amostras, oid(s)
                 break;
             case "WALK":
+                if (gerente_args.length != 2)
+                throw new InvalidParameterException(
+                    "Operacao " + gerente_args[0].toUpperCase() + " deve possuir 1 parametro.");
                 executeWalk(gerente_args[1]);
                 break;
             case "SET":
