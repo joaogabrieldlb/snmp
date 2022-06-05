@@ -198,7 +198,8 @@ public class GerenteApp {
                 break;
             }
         }
-        int larguraTabela = 35 * countColumns;
+        int larguraTabela = 26 * countColumns;
+        if (larguraTabela > 208) larguraTabela = 208 / countColumns;
 
         AsciiTable titulo = new AsciiTable();
         titulo.addRule();
