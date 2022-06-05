@@ -249,7 +249,7 @@ public class GerenteApp {
         }
         
         StringBuilder output;
-        for (int i = 0; i < amostras; i++) {
+        for (int i = 1; i <= amostras; i++) {
             try {
                 TimeUnit.SECONDS.sleep(tempo);
             } catch (InterruptedException e) {
@@ -257,7 +257,7 @@ public class GerenteApp {
             }
 
             output = new StringBuilder();
-            output.append("[T" + (i + 1) + "]\t");
+            output.append("[T" + i + "]\t");
             this.response = snmp.get(requestPDU, target);
             if (this.response.getResponse() == null) {
                 // request timed out

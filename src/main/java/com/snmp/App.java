@@ -54,8 +54,8 @@ public class App {
             helpMessage += "sem argumentos.";
         }
         helpMessage += "\n\t" + TextColor.lightGreen +"Formas de uso:";
-        helpMessage += "\n\t- Modo GERENTE: [ java App gerente | ./gerente.sh ] <ip_agente> <comunidade> <operacao_snmpv2c> <oid(s)> <conteudo>\n" + TextColor.defaultColor;
-        //helpMessage += "\n\t- Modo Agente: [ java App agente | ./agente.sh ] ";
+        helpMessage += "\n\t- Modo GERENTE: [gerente] <ip_agente> <comunidade> <operacao_snmpv2c> <parametros_especiais> <oid(s)> <conteudo>\n" + TextColor.defaultColor;
+        //helpMessage += "\n\t- Modo Agente: [agente] ";
         System.out.println(helpMessage);
         System.exit(1);
     }
